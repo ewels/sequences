@@ -1,0 +1,307 @@
+<!----------------------------------------------------
+     __   ___  __        ___       __   ___  __  
+    /__` |__  /  \ |  | |__  |\ | /  ` |__  /__` 
+    .__/ |___ \__X \__/ |___ | \| \__, |___ .__/ 
+
+------------------------------------------------------
+
+A lightweight and quick sequence manipulation tool.
+Please feel free to use and share the code: released
+under the GNU General Public Licence.
+
+Written by Phil Ewels, November 2011
+http://phil.ewels.co.uk
+
+Hosted on github:
+https://github.com/tallphil/sequences
+
+----------------------------------------------------->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<title>Sequences</title>
+<meta name="keywords" content="Phil Ewels, Sequences, Bioinformatics" />
+<meta name="copyright" content="copyright 2011 Phil Ewels" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<!-- Load jQuery from Google -->
+<script type="text/javascript" src="https://www.google.com/jsapi?key=ABQIAAAAfC3E-M5LUtWmCLJDKKZvAxRn0rnJvSm9PK8KDnqG0atQYlt0khSGiYG5Sl1XnNBJnWIyP3R9bl33Bw"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+<!-- Our manipulation scripts -->
+<script type="text/javascript">
+	$(document).ready(function() {
+		var autoselect = false;
+		var autocopy = false;
+		// Are we in a decent browser with local storage? Restore settings if so
+		function supports_html5_storage() {
+			try {
+				return 'localStorage' in window && window['localStorage'] !== null;
+			} catch (e) {
+				return false;
+			}
+		}
+		if(supports_html5_storage()){
+			if(localStorage["seq_type"] !== ''){
+				$(":radio[value="+localStorage["seq_type"]+"]").attr('checked','checked');
+			}
+			if(localStorage["kitchen_sink"] == 'true'){
+				$('#kitchen_sink_check').attr('checked','checked');
+				$('.kitchen_sink').show();
+			}
+			if(localStorage["autoselect_checked"] == 'true'){
+				$('#autoselect_check').attr('checked','checked');
+				autoselect = true;
+			}
+			if(localStorage["autocopy_checked"] == 'true'){
+				$('#autocopy_check').attr('checked','checked');
+				autocopy = true;
+			}
+		}
+		// Run function when a new character is typed
+		$('#input').keyup(function(){
+			sequences($('#input').val(), $('input[name=seq_type]:checked', 'form').val());
+		});
+		// Run function when DNA or RNA is selected
+		$('input[name=seq_type]').click(function(){
+			sequences($('#input').val(), $('input[name=seq_type]:checked', 'form').val());
+			if(supports_html5_storage()){ localStorage["seq_type"] = $('input[name=seq_type]:checked', 'form').val(); }
+		});
+		
+		// Show or hide the kitchen sink results
+		$('#kitchen_sink_check').click(function(){
+			if($('#kitchen_sink_check').is(':checked')){
+				$('.kitchen_sink').slideDown();
+				if(supports_html5_storage()){ localStorage["kitchen_sink"] = 'true'; }
+			} else {
+				$('.kitchen_sink').slideUp();
+				if(supports_html5_storage()){ localStorage["kitchen_sink"] = 'false'; }
+			}
+		});
+		// Set or unset the autoselect variable
+		$('#autoselect_check').click(function(){
+			if($('#autoselect_check').is(':checked')){
+				autoselect = true;
+				if(supports_html5_storage()){ localStorage["autoselect_checked"] = 'true'; }
+			} else {
+				autoselect = false;
+				if(supports_html5_storage()){ localStorage["autoselect_checked"] = 'false'; }
+			}
+		});
+		// Show option for autocopy if available
+		if (window.clipboardData && clipboardData.setData) {
+			$('#autocopy_label').show();
+		}
+		$('#autocopy_check').click(function(){
+			if($('#autocopy_check').is(':checked')){
+				autocopy = true;
+				if(supports_html5_storage()){ localStorage["autocopy_checked"] = 'true'; }
+			} else {
+				autocopy = false;
+				if(supports_html5_storage()){ localStorage["autocopy_checked"] = 'false'; }
+			}
+		});
+		
+		// The sequences function - the meat of the page
+		//   takes two inputs - the sequence to be analysed, and the sequence type (DNA/RNA)
+		function sequences(input, seq_type){
+			var input = input.split('');							// split the string into an array
+			var rc = [];
+			var r = [];
+			var c = [];
+			for (x in input) {										// loop through each character
+				input[x] = input[x].toUpperCase();
+				if(seq_type == 'DNA' && input[x] == 'U'){			// swap any Ts for Us, or vice versa
+					input[x] = 'T';
+				} else if(seq_type == 'RNA' && input[x] == 'T'){
+					input[x] = 'U';
+				}
+				r.unshift(input[x]);
+				switch(input[x]) {
+					case 'A':
+						if(seq_type == 'DNA'){
+							c.push('T');
+							rc.unshift('T');
+						} else if(seq_type == 'RNA'){
+							c.push('U');
+							rc.unshift('U');
+						}
+						break;
+					case 'T':
+					case 'U':
+						c.push('A');
+						rc.unshift('A');
+						break;
+					case 'G':
+						c.push('C');
+						rc.unshift('C');
+						break;
+					case 'C':
+						c.push('G');
+						rc.unshift('G');
+						break;
+					default:										// default actions (eg. for N's)
+						c.push(input[x]);
+						rc.unshift(input[x]);
+						break;
+				}
+			}
+			// Keep a non-breaking space if we've deleted everything
+			if(input.join('') == ''){
+				input.push('&nbsp;');
+				rc.push('&nbsp;');
+				r.push('&nbsp;');
+				c.push('&nbsp;');
+			}
+			var dsdna = input.join('') + "\n" + c.join('');
+			// Put the results into the page
+			//   we have to insert the entire <pre> element because internet explorer
+			//   doesn't render it properly otherwise
+			$('#dsDNA').html('<pre>' + dsdna + '</pre>');
+			$('#rc').html('<pre>' + rc.join('') + '</pre>');
+			$('#c').html('<pre>' + c.join('') + '</pre>');
+			$('#r').html('<pre>' + r.join('') + '</pre>');
+			// If we're in internet explorer, copy reverse compliment to clipboard
+			if (window.clipboardData && clipboardData.setData && autocopy) {
+				window.clipboardData.setData('Text', rc.join(''));
+				$('#autocopy_status').show().delay(500).fadeOut("slow");
+			}
+			// Next best thing - select the reverse compliment text
+			if(autoselect){
+				selectText('rc');
+			}
+		}
+		// Highlight text function, from http://stackoverflow.com/questions/985272/jquery-selecting-text-in-an-element-akin-to-highlighting-with-your-mouse
+		function selectText(element) {
+			var doc = document;
+			var text = doc.getElementById(element);    
+			if (doc.body.createTextRange) { // ms
+				var range = doc.body.createTextRange();
+				range.moveToElementText(text);
+				range.select();
+			} else if (window.getSelection) {
+				var selection = window.getSelection();
+				if (selection.setBaseAndExtent) { // webkit
+					selection.setBaseAndExtent(text, 0, text, 1);
+				} else { // moz, opera
+					var range = doc.createRange();
+					range.selectNodeContents(text);
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+			}
+		}
+	});
+</script>
+<style type="text/css">
+body {
+	margin:0;
+	padding:0;
+	border-top:4px solid #00FBFF;
+	color: #2d2d2d;
+	font-family: sans-serif;
+	font-size:12pt;
+}
+#content { padding:20px 40px; }
+
+form { margin-bottom:30px; }
+#input {
+	font-family:monospace;
+	padding:3px 5px;
+	width:300px;
+}
+#primary_labels { float:left; }
+#primary_labels p { margin:0; }
+#secondary_labels { margin-left:160px; float:left; }
+#rna_label { margin-left:20px; }
+#ksink_label, #autoselect_label, #autocopy_label { float:left; clear:both; }
+#autocopy_label { display:none; }
+#results p { margin:5px auto 0; }
+#results pre {
+	background-color:#dedede;
+	padding:3px 5px;
+	margin:5px 0 15px;
+	display:-moz-inline-stack;
+	display:inline-block;
+	/* IE hack for inline-block */
+	zoom:1;
+	*display:inline;
+}
+.kitchen_sink { display:none; }
+.ks_labels { width:300px; }
+#autocopy_status {
+	display:none;
+	background-color:#D7F5CE;
+	font-style:italic;
+	font-size:smaller;
+	font-color:#ccc;
+	margin-left:10px;
+	padding:1px 4px;
+}
+
+#credits {
+	clear:both;
+	font-size:8pt;
+	color:#999;
+	background-color:#ededed;
+	border-top:1px solid #ccc;
+	padding:10px 20px;
+}
+#credits a { color:#999; }
+</style>
+</head>
+<body>
+<div id="content">
+	<h1>Sequence Manipulation</h1>
+
+	<form>
+		<p><label for="input">Your Sequence:</label> <input type="text" id="input" /></p>
+		<div id="primary_labels">
+		   <p><label id="dna_label"><input type="radio" name="seq_type" value="DNA" checked="checked" /> DNA</label>
+		      <label id="rna_label"><input type="radio" name="seq_type" value="RNA" /> RNA</label></p>
+		</div>
+		<div id="secondary_labels">
+		   <label id="ksink_label" title="Show Reverse and Complementary Sequences"><input type="checkbox" id="kitchen_sink_check" /> Kitchen Sink?</label><br />
+		   <div class="kitchen_sink ks_labels">
+				<label id="autoselect_label" title="Automatically select the reverse compliment. Useful for quick copying - works well in Chrome and Internet Explorer, not so well in Firefox"><input type="checkbox" id="autoselect_check" /> Auto Select Reverse Compliment?</label>
+				<label id="autocopy_label" title="Automatically copy the reverse compliment to the clipboard"><input type="checkbox" id="autocopy_check" /> Automatically Copy Reverse Compliment?</label>
+		   </div>
+		</div>
+		<div style="clear:both;"></div>
+	</form>
+
+	<div id="results">
+		<p>dsDNA:</p>
+		<div id="dsDNA"><pre>&nbsp;
+&nbsp;</pre></div>
+
+		<p>Reverse Compliment: <span id="autocopy_status">Copied to clipboard</span></p>
+		<div id="rc"><pre>&nbsp;</pre></div>
+	
+		<div class="kitchen_sink">
+			<p>Compliment:</p>
+			<div id="c"><pre>&nbsp;</pre></div>
+
+			<p>Reverse:</p>
+			<div id="r"><pre>&nbsp;</pre></div>
+		</div>
+	</div>
+</div>
+
+<div id="credits">
+	<p>Copyright &copy; 2011 <a href="http://phil.ewels.co.uk" target="_blank">Phil Ewels</a>. Available to download from <a href="https://github.com/tallphil/sequences" target="_blank">github</a><br />
+	This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see http://www.gnu.org/licenses/</p>
+</div>
+
+</body>
+</html>
