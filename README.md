@@ -2,6 +2,8 @@
 
 ### http://ewels.github.io/sequences/
 
+---
+
 Sequences is a lightweight and quick DNA sequence manipulation tool.
 
 A very common task for anyone involved in genetics is the manipulation of DNA
@@ -16,4 +18,11 @@ clipboard in internet explorer.
 
 It's free for anyone to use under an MIT licence, and everything is included
 in the one HTML file. You can access it directly at http://ewels.github.io/sequences/
-or download and run on your own computer / server.
+or download and run on your own computer or server.
+
+---
+
+Written by Phil Ewels ([@ewels](https://github.com/ewels)).
+http://phil.ewels.co.uk
+
+First written way back in 2011, revamped in 2016.
