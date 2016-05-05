@@ -20,275 +20,198 @@ https://github.com/ewels/sequences
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
-<title>Sequences</title>
-<meta name="keywords" content="Phil Ewels, Sequences, Bioinformatics" />
-<meta name="copyright" content="copyright 2016 Phil Ewels" />
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-<!-- Load jQuery from Google -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-<!-- Our manipulation scripts -->
-<script type="text/javascript">
-	$(document).ready(function() {
-		var autoselect = false;
-		var autocopy = false;
-		// Are we in a decent browser with local storage? Restore settings if so
-		function supports_html5_storage() {
-			try {
-				return 'localStorage' in window && window['localStorage'] !== null;
-			} catch (e) {
-				return false;
-			}
+	<title>Sequences</title>
+	<meta name="keywords" content="Phil Ewels, Sequences, Bioinformatics" />
+	<meta name="copyright" content="copyright 2016 Phil Ewels" />
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<style type="text/css">
+		body {
+			margin:0;
+			padding:0;
+			border-top:4px solid #00FBFF;
+			color: #2d2d2d;
+			font-family: sans-serif;
+			font-size:12pt;
 		}
-		if(supports_html5_storage()){
-			if(localStorage["seq_type"] !== ''){
-				$(":radio[value="+localStorage["seq_type"]+"]").attr('checked','checked');
-			}
-			if(localStorage["kitchen_sink"] == 'true'){
-				$('#kitchen_sink_check').attr('checked','checked');
-				$('.kitchen_sink').show();
-			}
-			if(localStorage["autoselect_checked"] == 'true'){
-				$('#autoselect_check').attr('checked','checked');
-				autoselect = true;
-			}
-			if(localStorage["autocopy_checked"] == 'true'){
-				$('#autocopy_check').attr('checked','checked');
-				autocopy = true;
-			}
-		}
-		// Run function when a new character is typed
-		$('#input').keyup(function(){
-			sequences($('#input').val(), $('input[name=seq_type]:checked', 'form').val());
-		});
-		// Run function when DNA or RNA is selected
-		$('input[name=seq_type]').click(function(){
-			sequences($('#input').val(), $('input[name=seq_type]:checked', 'form').val());
-			if(supports_html5_storage()){ localStorage["seq_type"] = $('input[name=seq_type]:checked', 'form').val(); }
-		});
-		
-		// Show or hide the kitchen sink results
-		$('#kitchen_sink_check').click(function(){
-			if($('#kitchen_sink_check').is(':checked')){
-				$('.kitchen_sink').slideDown();
-				if(supports_html5_storage()){ localStorage["kitchen_sink"] = 'true'; }
-			} else {
-				$('.kitchen_sink').slideUp();
-				if(supports_html5_storage()){ localStorage["kitchen_sink"] = 'false'; }
-			}
-		});
-		// Set or unset the autoselect variable
-		$('#autoselect_check').click(function(){
-			if($('#autoselect_check').is(':checked')){
-				autoselect = true;
-				if(supports_html5_storage()){ localStorage["autoselect_checked"] = 'true'; }
-			} else {
-				autoselect = false;
-				if(supports_html5_storage()){ localStorage["autoselect_checked"] = 'false'; }
-			}
-		});
-		// Show option for autocopy if available
-		if (window.clipboardData && clipboardData.setData) {
-			$('#autocopy_label').show();
-		}
-		$('#autocopy_check').click(function(){
-			if($('#autocopy_check').is(':checked')){
-				autocopy = true;
-				if(supports_html5_storage()){ localStorage["autocopy_checked"] = 'true'; }
-			} else {
-				autocopy = false;
-				if(supports_html5_storage()){ localStorage["autocopy_checked"] = 'false'; }
-			}
-		});
-		
-		// The sequences function - the meat of the page
-		//   takes two inputs - the sequence to be analysed, and the sequence type (DNA/RNA)
-		function sequences(input, seq_type){
-			var input = input.split('');							// split the string into an array
-			var rc = [];
-			var r = [];
-			var c = [];
-			for (x in input) {										// loop through each character
-				input[x] = input[x].toUpperCase();
-				if(seq_type == 'DNA' && input[x] == 'U'){			// swap any Ts for Us, or vice versa
-					input[x] = 'T';
-				} else if(seq_type == 'RNA' && input[x] == 'T'){
-					input[x] = 'U';
-				}
-				r.unshift(input[x]);
-				switch(input[x]) {
-					case 'A':
-						if(seq_type == 'DNA'){
-							c.push('T');
-							rc.unshift('T');
-						} else if(seq_type == 'RNA'){
-							c.push('U');
-							rc.unshift('U');
-						}
-						break;
-					case 'T':
-					case 'U':
-						c.push('A');
-						rc.unshift('A');
-						break;
-					case 'G':
-						c.push('C');
-						rc.unshift('C');
-						break;
-					case 'C':
-						c.push('G');
-						rc.unshift('G');
-						break;
-					default:										// default actions (eg. for N's)
-						c.push(input[x]);
-						rc.unshift(input[x]);
-						break;
-				}
-			}
-			// Keep a non-breaking space if we've deleted everything
-			if(input.join('') == ''){
-				input.push('&nbsp;');
-				rc.push('&nbsp;');
-				r.push('&nbsp;');
-				c.push('&nbsp;');
-			}
-			var dsdna = input.join('') + "\n" + c.join('');
-			// Put the results into the page
-			//   we have to insert the entire <pre> element because internet explorer
-			//   doesn't render it properly otherwise
-			$('#dsDNA').html('<pre>' + dsdna + '</pre>');
-			$('#rc').html('<pre>' + rc.join('') + '</pre>');
-			$('#c').html('<pre>' + c.join('') + '</pre>');
-			$('#r').html('<pre>' + r.join('') + '</pre>');
-			// If we're in internet explorer, copy reverse compliment to clipboard
-			if (window.clipboardData && clipboardData.setData && autocopy) {
-				window.clipboardData.setData('Text', rc.join(''));
-				$('#autocopy_status').show().delay(500).fadeOut("slow");
-			}
-			// Next best thing - select the reverse compliment text
-			if(autoselect){
-				selectText('rc');
-			}
-		}
-		// Highlight text function, from http://stackoverflow.com/questions/985272/jquery-selecting-text-in-an-element-akin-to-highlighting-with-your-mouse
-		function selectText(element) {
-			var doc = document;
-			var text = doc.getElementById(element);    
-			if (doc.body.createTextRange) { // ms
-				var range = doc.body.createTextRange();
-				range.moveToElementText(text);
-				range.select();
-			} else if (window.getSelection) {
-				var selection = window.getSelection();
-				if (selection.setBaseAndExtent) { // webkit
-					selection.setBaseAndExtent(text, 0, text, 1);
-				} else { // moz, opera
-					var range = doc.createRange();
-					range.selectNodeContents(text);
-					selection.removeAllRanges();
-					selection.addRange(range);
-				}
-			}
-		}
-	});
-</script>
-<style type="text/css">
-body {
-	margin:0;
-	padding:0;
-	border-top:4px solid #00FBFF;
-	color: #2d2d2d;
-	font-family: sans-serif;
-	font-size:12pt;
-}
-#content { padding:20px 40px; }
+		#content { padding:20px 40px; }
 
-form { margin-bottom:30px; }
-#input {
-	font-family:monospace;
-	padding:3px 5px;
-	width:300px;
-}
-#primary_labels { float:left; }
-#primary_labels p { margin:0; }
-#secondary_labels { margin-left:160px; float:left; }
-#rna_label { margin-left:20px; }
-#ksink_label, #autoselect_label, #autocopy_label { float:left; clear:both; }
-#autocopy_label { display:none; }
-#results p { margin:5px auto 0; }
-#results pre {
-	background-color:#dedede;
-	padding:3px 5px;
-	margin:5px 0 15px;
-	display:-moz-inline-stack;
-	display:inline-block;
-	/* IE hack for inline-block */
-	zoom:1;
-	*display:inline;
-}
-.kitchen_sink { display:none; }
-.ks_labels { width:300px; }
-#autocopy_status {
-	display:none;
-	background-color:#D7F5CE;
-	font-style:italic;
-	font-size:smaller;
-	font-color:#ccc;
-	margin-left:10px;
-	padding:1px 4px;
-}
+		#input {
+			font-family:monospace;
+			padding:3px 5px;
+			width:300px;
+			line-height: 18px;
+		}
+		#rna_label { margin-left:20px; }
+		#results p { margin: 25px auto 5px; }
+		#results pre {
+			vertical-align: middle;
+			background-color:#dedede;
+			padding: 5px 8px;
+			margin: 0;
+			line-height: 17px;
+			height: 17px;
+			display:inline-block;
+		}
+		.hl {
+			background-color: #DEAFB2;
+		}
+		.button {
+			vertical-align: middle;
+			background-color: #ffffff;
+			border: 1px solid #cccccc;
+			padding: 5px 8px;
+			cursor: pointer;
+			border-top-left-radius: 5px;
+			border-bottom-left-radius: 5px;
+			-webkit-transition: background-color 0.1s, border-color 0.1s;
+    	transition: background-color 0.1s, border-color 0.1s;
+			outline:none;
+		}
+		.button:hover {
+			background-color: #ddd;
+			border-color: #999;
+		}
+		.top-button {
+			border-bottom: 1px solid transparent;
+			border-bottom-left-radius: 0;
+		}
+		.bottom-button {
+			border-top-left-radius: 0;
+		}
 
-#credits {
-	clear:both;
-	font-size:8pt;
-	color:#999;
-	background-color:#ededed;
-	border-top:1px solid #ccc;
-	padding:10px 20px;
-}
-#credits a { color:#999; }
-</style>
+		#credits {
+			font-size:8pt;
+			color:#999;
+			background-color:#ededed;
+			border-top:1px solid #ccc;
+			padding:10px 20px;
+		}
+		#credits a { color:#999; }
+	</style>
 </head>
 <body>
-<div id="content">
-	<h1>Sequence Manipulation</h1>
+	<div id="content">
+		<h1>Sequences</h1>
 
-	<form>
-		<p><label for="input">Your Sequence:</label> <input type="text" id="input" /></p>
-		<div id="primary_labels">
-		   <p><label id="dna_label"><input type="radio" name="seq_type" value="DNA" checked="checked" /> DNA</label>
-		      <label id="rna_label"><input type="radio" name="seq_type" value="RNA" /> RNA</label></p>
-		</div>
-		<div id="secondary_labels">
-		   <label id="ksink_label" title="Show Reverse and Complementary Sequences"><input type="checkbox" id="kitchen_sink_check" /> Kitchen Sink?</label><br />
-		   <div class="kitchen_sink ks_labels">
-				<label id="autoselect_label" title="Automatically select the reverse compliment. Useful for quick copying - works well in Chrome and Internet Explorer, not so well in Firefox"><input type="checkbox" id="autoselect_check" /> Auto Select Reverse Compliment?</label>
-				<label id="autocopy_label" title="Automatically copy the reverse compliment to the clipboard"><input type="checkbox" id="autocopy_check" /> Automatically Copy Reverse Compliment?</label>
-		   </div>
-		</div>
-		<div style="clear:both;"></div>
-	</form>
+		<form>
+			<p><label for="input">Your Sequence:</label> <input type="text" id="input" /></p>
+			<p>
+				<label id="dna_label"><input type="radio" name="seq_type" value="DNA" checked="checked" /> DNA</label>
+			  <label id="rna_label"><input type="radio" name="seq_type" value="RNA" /> RNA</label>
+			</p>
+		</form>
 
-	<div id="results">
-		<p>dsDNA:</p>
-		<div id="dsDNA"><pre>&nbsp;
-&nbsp;</pre></div>
+		<div id="results">
+			<p id="dsDNA_label">dsDNA:</p>
+			<div>
+				<button class="button button-copy top-button" title="Copy to clipboard">
+					<svg width="13" height="14.84" viewBox="0 0 1024 896" xmlns="http://www.w3.org/2000/svg">
+  					<path d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z" />
+					</svg>
+				</button><pre class="as_input"></pre>
+			</div>
+			<div>
+				<button class="button button-copy bottom-button" title="Copy to clipboard">
+					<svg width="13" height="14.84" viewBox="0 0 1024 896" xmlns="http://www.w3.org/2000/svg">
+  					<path d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z" />
+					</svg>
+				</button><pre class="complement"></pre>
+			</div>
 
-		<p>Reverse Compliment: <span id="autocopy_status">Copied to clipboard</span></p>
-		<div id="rc"><pre>&nbsp;</pre></div>
-	
-		<div class="kitchen_sink">
+			<p>Reverse Compliment:</p>
+			<div>
+				<button class="button button-copy" title="Copy to clipboard">
+					<svg width="13" height="14.84" viewBox="0 0 1024 896" xmlns="http://www.w3.org/2000/svg">
+  					<path d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z" />
+					</svg>
+				</button><pre class="rev_complement"></pre>
+			</div>
+		
 			<p>Compliment:</p>
-			<div id="c"><pre>&nbsp;</pre></div>
+			<div >
+				<button class="button button-copy" title="Copy to clipboard">
+					<svg width="13" height="14.84" viewBox="0 0 1024 896" xmlns="http://www.w3.org/2000/svg">
+  					<path d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z" />
+					</svg>
+				</button><pre class="complement"></pre>
+			</div>
 
 			<p>Reverse:</p>
-			<div id="r"><pre>&nbsp;</pre></div>
+			<div>
+				<button class="button button-copy" title="Copy to clipboard">
+					<svg width="13" height="14.84" viewBox="0 0 1024 896" xmlns="http://www.w3.org/2000/svg">
+  					<path d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z" />
+					</svg>
+				</button><pre class="rev"></pre>
+			</div>
 		</div>
 	</div>
-</div>
 
-<div id="credits">
-	<p>Copyright &copy; 2016 <a href="http://phil.ewels.co.uk" target="_blank">Phil Ewels</a>. Source code available on <a href="https://github.com/ewels/sequences" target="_blank">GitHub</a> with a <a href="LICENCE">MIT licence</a>.</p>
-</div>
+	<div id="credits">
+		<p>Made by <a href="http://phil.ewels.co.uk" target="_blank">Phil Ewels</a>. Source code available on <a href="https://github.com/ewels/sequences" target="_blank">GitHub</a> with a <a href="LICENCE">MIT licence</a>.</p>
+	</div>
+
+
+	<!-- Load external JS libraries from Google -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.10/clipboard.min.js"></script>
+
+	<!-- Our manipulation scripts -->
+	<script type="text/javascript">
+		$(document).ready(function() {
+			
+			// Initialise copy buttons
+			var clipboard = new Clipboard('.button-copy', {
+				target: function(trigger) { return trigger.nextElementSibling; }
+			});
+			clipboard.on('success', function(e) {
+		    e.clearSelection();
+			});
+			
+			// Run function when a new character is typed
+			$('#input').keyup(function(){
+				sequences();
+			});
+			// Switch between DNA and RNA
+			$('input[name=seq_type]').click(function(){
+				$('#dsDNA_label').text('ds'+$(this).val());
+				sequences();
+			});
+			
+			// The sequences function - the meat of the page
+			//   takes two inputs - the sequence to be analysed, and the sequence type (DNA/RNA)
+			function sequences(input, seq_type){
+				var seq_type = $('input[name=seq_type]:checked', 'form').val();
+				var input = $('#input').val().toUpperCase().split('');
+				var tr = {
+					'DNA': { 'A':'T', 'T': 'A', 'U': 'A', 'G': 'C', 'C': 'G' },
+				  'RNA': { 'A':'U', 'T': 'A', 'U': 'A', 'G': 'C', 'C': 'G' }
+				}
+				var c = [];
+				for (var x = 0; x < input.length; x++) {
+					// Complement translation
+					if(['A','C','T','G','U'].indexOf(input[x]) > -1 ){
+						c.push(tr[seq_type][input[x]]);
+					} else {
+						input[x] = '<span class="hl">'+input[x]+'</span>';
+						c.push('<span class="hl">'+input[x]+'</span>');
+					}
+					if(seq_type == 'RNA' && input[x] == 'T'){
+						input[x] = 'U';
+					}
+					if(seq_type == 'DNA' && input[x] == 'U'){
+						input[x] = 'T';
+					}
+				}
+				// Put the results into the page
+				$('.as_input').html( input.join('')  );
+				$('.complement').html( c.join('') );
+				$('.rev_complement').html( input.reverse().join('') );
+				$('.rev').html( c.reverse().join('') );
+			}
+
+		});
+	</script>
 
 </body>
 </html>
